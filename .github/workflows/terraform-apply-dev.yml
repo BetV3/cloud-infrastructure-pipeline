@@ -1,0 +1,81 @@
+name: Terraform Apply (dev)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "infrastructure/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-apply-dev
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  WORKDIR: infrastructure/root
+  TF_ENV: dev
+  AWS_REGION: us-east-1
+
+jobs:
+  apply-dev:
+    name: Apply dev
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKDIR }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN_APPLY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Write backend config
+        run: |
+          cat > backend.hcl <<EOF
+          bucket               = "${{ vars.TF_STATE_BUCKET }}"
+          key                  = "${{ vars.TF_STATE_KEY }}"
+          region               = "${{ vars.TF_STATE_REGION }}"
+          dynamodb_table       = "${{ vars.TF_LOCK_TABLE }}"
+          encrypt              = true
+          workspace_key_prefix = "env"
+          EOF
+
+      - name: Terraform init (remote backend)
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Select workspace
+        run: |
+          terraform workspace new "$TF_ENV" || true
+          terraform workspace select "$TF_ENV"
+
+      - name: Backup state object (extra safety)
+        run: |
+          TS="$(date -u +%Y%m%dT%H%M%SZ)"
+          aws s3api copy-object \
+            --bucket "${{ vars.TF_STATE_BUCKET }}" \
+            --copy-source "${{ vars.TF_STATE_BUCKET }}/${{ vars.TF_STATE_KEY }}" \
+            --key "backups/${{ env.TF_ENV }}/${TS}-terraform.tfstate" \
+            --metadata-directive COPY \
+          || echo "No existing state object to backup (first run)."
+
+      - name: Terraform plan
+        run: terraform plan -var-file=../environments/dev.tfvars -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
