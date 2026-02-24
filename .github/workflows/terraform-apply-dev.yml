@@ -20,7 +20,7 @@ env:
   TF_INPUT: "false"
   WORKDIR: infrastructure/root
   TF_ENV: dev
-  AWS_REGION: us-east-1
+  AWS_REGION: us-east-2
 
 jobs:
   apply-dev:
