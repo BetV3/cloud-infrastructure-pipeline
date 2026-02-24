@@ -37,7 +37,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
   availability_zone       = each.value
   cidr_block              = local.public_cidrs[each.key]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false # Fixes CKV_AWS_130 from checkov
 
   tags = {
     Name = "${local.name}-public-${each.value}"
