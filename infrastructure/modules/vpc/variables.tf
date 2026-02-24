@@ -52,4 +52,5 @@ variable "flow_logs_traffic_type" {
 variable "flow_logs_retention_in_days" {
     type = number
     description = "Cloudwatch retention for VPC flow logs"
+    default = 90
 }
