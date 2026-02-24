@@ -6,7 +6,7 @@ provider "aws" {
       var.tags,
       {
         Environment = var.environment
-        ManagedBy   = "terraform"
+        ManagedBy   = "terraform-test"
         Project     = "cloud-infrastructure-pipeline"
       }
     )
