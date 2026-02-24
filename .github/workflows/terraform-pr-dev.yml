@@ -52,11 +52,35 @@ jobs:
             
             - name: TFLint
               run: tflint --recursive
+    security-scan:
+        name: Security Scan (tfsec + checkov)
+        runs-on: ubuntu-latest
+        needs: validate
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v5
+            
+            - name: tfsec (fail on CRITICAL)
+              uses: aquasecurity/tfsec-action@v1.0.0
+              with:
+                working_directory: infrastructure
+                additional_args: --minimum-severity CRITICAL --no-color
+                soft_fail: false
+            
+            - name: checkov (fail on any findings)
+              uses: bridgecrewio/checkov-action@v12
+              with:
+                directory: infrastructure
+                framework: terraform
+                output_format: cli
+                quiet: true
+                soft_fail: false
 
     plan-dev:
         name: Plan (dev)
         runs-on: ubuntu-latest
-        needs: validate
+        needs: security-scan
         defaults:
             run:
                 working-directory: ${{ env.WORKDIR }}
