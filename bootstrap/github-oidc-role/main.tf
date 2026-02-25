@@ -7,7 +7,7 @@ data "tls_certificate" "github_actions" {
 }
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazon.com"]
+  client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = [data.tls_certificate.github_actions.certificates[0].sha1_fingerprint]
 
   tags = var.tags
@@ -194,6 +194,82 @@ data "aws_iam_policy_document" "apply_vpc" {
   }
 }
 
+data "aws_iam_policy_document" "apply_vpc_logging" {
+  statement {
+    effect = "Allow"
+    actions = [
+      # VPC Flow Logs
+      "ec2:CreateFlowLogs",
+      "ec2:DeleteFlowLogs",
+      "ec2:DescribeFlowLogs",
+
+      # Default SG lockdown (Terraform may use both authorize/revoke to converge)
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:DescribeSecurityGroups",
+
+      # CloudWatch Logs log group (for flow logs destination)
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:DescribeLogGroups",
+      "logs:PutRetentionPolicy",
+      "logs:TagLogGroup",
+      "logs:UntagLogGroup",
+      "logs:ListTagsLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+
+      # IAM role + inline policy used by VPC Flow Logs service
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:GetRolePolicy",
+
+      # Needed so Terraform can pass the role to the Flow Logs service
+      "iam:PassRole",
+
+      # If you encrypt the log group with a CMK (CKV_AWS_158), Terraform will create/manage it:
+      "kms:CreateKey",
+      "kms:PutKeyPolicy",
+      "kms:DescribeKey",
+      "kms:EnableKeyRotation",
+      "kms:ScheduleKeyDeletion",
+      "kms:TagResource",
+      "kms:UntagResource",
+      "kms:CreateAlias",
+      "kms:DeleteAlias",
+      "kms:ListAliases"
+    ]
+    resources = ["*"]
+  }
+
+  # Tighten PassRole a bit: only when passing to Flow Logs service
+  statement {
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["vpc-flow-logs.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "apply_vpc_logging" {
+  name   = "cip-apply-vpc-logging"
+  policy = data.aws_iam_policy_document.apply_vpc_logging.json
+  tags   = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "apply_vpc_logging" {
+  role       = aws_iam_role.apply.name
+  policy_arn = aws_iam_policy.apply_vpc_logging.arn
+}
 
 resource "aws_iam_policy" "apply_vpc" {
   name   = "cip-apply-vpc"

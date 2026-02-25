@@ -6,18 +6,18 @@ variable "aws_region" {
 variable "github_org" {
   type        = string
   description = "Github org or username that owns the repo."
-  default = "BetV3"
+  default     = "BetV3"
 }
 
 variable "github_repo" {
   type        = string
   description = "Github repository name (without org)."
-  default = "cloud-infrastructure-pipeline"
+  default     = "cloud-infrastructure-pipeline"
 }
 variable "apply_branch" {
   type        = string
   description = "Branch allowed to assume the apply role"
-  default = "main"
+  default     = "main"
 }
 
 variable "state_bucket_name" {

@@ -64,4 +64,5 @@ variable "create_flow_logs_kms_key" {
 variable "flow_logs_kms_key_arn" {
     type = string
     description = "If set, use this existing KMS key ARN for the flow logs log group instead of creating one"
+    default = null
 }
