@@ -1,8 +1,66 @@
+data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
+
+locals {
+  flow_logs_kms_arn = (var.flow_logs_kms_key_arn != null ? var.flow_logs_kms_key_arn : (var.create_flow_logs_kms_key ? aws_kms_key.flow_logs[0].arn : null))
+}
+
+data "aws_iam_policy_document" "flow_logs_kms" {
+  statement {
+    sid = "EnableRootPermissions"
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "AllowCloudWatchLogsUse"
+    effect = "Allow"
+    principals {
+      type = "Service"
+      identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+    }
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_kms_key" "flow_logs" {
+  count = var.enable_flow_logs && var.create_flow_logs_kms_key && var.flow_logs_kms_key_arn == null ? 1 : 0
+  description = "KMS key for ${local.name} VPC flow logs"
+  enable_key_rotation = true
+  deletion_window_in_days = 30
+  policy = data.aws_iam_policy_document.flow_logs_kms.json
+
+  tags = {
+    Name = "${local.name}-flow-logs-kms"
+  }
+}
+
+resource "aws_kms_alias" "flow_logs" {
+  count = length(aws_kms_key.flow_logs)
+  name = "alias/${local.name}-flow-logs"
+  target_key_id = aws_kms_key.flow_logs[0].key_id
+}
+
 resource "aws_cloudwatch_log_group" "vpc_flow" {
     count = var.enable_flow_logs ? 1 : 0
     name = "/aws/vpc-flow-logs/${local.name}"
     retention_in_days = var.flow_logs_retention_in_days
 
+
+    kms_key_id = local.flow_logs_kms_arn
+    
     tags = {
         Name = "${local.name}-vpc-flow-logs"
     }
