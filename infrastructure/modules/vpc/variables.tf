@@ -13,6 +13,12 @@ variable "vpc_cidr" {
   description = "VPC CIDR"
 }
 
+variable "availability_zone_names" {
+  type        = list(string)
+  description = "Explicit AZ allowlist. Region specific: change this when changing aws_region. Keeping it explicit stops subnet placement shifting when AWS adds a zone."
+  default     = ["us-east-2a", "us-east-2b", "us-east-2c"]
+}
+
 variable "az_count" {
   type        = number
   description = "How many AZ to use."

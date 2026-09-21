@@ -6,6 +6,19 @@ locals {
 }
 
 data "aws_iam_policy_document" "flow_logs_kms" {
+  # This document is a KMS KEY POLICY (resource policy), not an IAM identity
+  # policy. CKV_AWS_109/111/356 evaluate identity-policy semantics, where an
+  # unconstrained "*" resource grants standing permissions to a principal.
+  # In a key policy the resource is the key the policy is attached to, so
+  # "*" is scoped to that one key, and the root grant below is the delegation
+  # statement AWS documents as required. Omitting it makes the key
+  # unmanageable: no principal can grant access to it afterwards.
+  # https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html
+  # Scoped grant for the actual consumer is the second statement, which lists
+  # explicit kms: actions for the CloudWatch Logs service principal only.
+  #checkov:skip=CKV_AWS_109:KMS key policy, not an identity policy; "*" is the key itself
+  #checkov:skip=CKV_AWS_111:root delegation is required by AWS for key manageability
+  #checkov:skip=CKV_AWS_356:resource "*" in a key policy resolves to the attached key
   statement {
     sid    = "EnableRootPermissions"
     effect = "Allow"

@@ -19,6 +19,12 @@ variable "vpc_cidr" {
   description = "VPC CIDR block (e.g 10.0.0.0/8)"
 }
 
+variable "availability_zone_names" {
+  type        = list(string)
+  description = "Explicit AZ allowlist, must match aws_region."
+  default     = ["us-east-2a", "us-east-2b", "us-east-2c"]
+}
+
 variable "az_count" {
   type        = number
   description = "How many AZs to use."
