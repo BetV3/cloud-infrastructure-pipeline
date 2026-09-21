@@ -9,7 +9,7 @@ locals {
   # Generate 2 * az_count subnets from vpc_cidr:
   # - public: netnums 0..(az_count-1)
   # - private: netnums az_count..(2*az_count-1)
-  public_cidrs = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, var.subnet_newbits, i)]
+  public_cidrs  = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, var.subnet_newbits, i)]
   private_cidrs = [for i in range(var.az_count) : cidrsubnet(var.vpc_cidr, var.subnet_newbits, i + var.az_count)]
 }
 
@@ -82,7 +82,7 @@ resource "aws_route_table_association" "public" {
 
 # NAT (optional)
 resource "aws_eip" "nat" {
-  count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : var.az_count) : 0
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : var.az_count) : 0
   domain = "vpc"
 
   tags = {
