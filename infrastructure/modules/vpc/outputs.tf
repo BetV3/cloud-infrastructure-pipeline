@@ -1,19 +1,19 @@
 output "vpc_id" {
-    value = aws_vpc.this.id
+  value = aws_vpc.this.id
 }
 
 output "public_subnet_ids" {
-    value = [for s in aws_subnet.public : s.id]
+  value = [for s in aws_subnet.public : s.id]
 }
 
 output "private_subnet_ids" {
-    value = [for s in aws_subnet.private : s.id]
+  value = [for s in aws_subnet.private : s.id]
 }
 
 output "nat_gateway_ids" {
-    value = [for ngw in aws_nat_gateway.this : ngw.id]
+  value = [for ngw in aws_nat_gateway.this : ngw.id]
 }
 
 output "azs" {
-    value = local.azs
+  value = local.azs
 }
