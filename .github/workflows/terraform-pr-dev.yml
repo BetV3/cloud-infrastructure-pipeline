@@ -36,7 +36,10 @@ jobs:
             - name: Setup TFLint
               uses: terraform-linters/setup-tflint@v4
               with:
-                tflint_version: latest
+                # pinned: `latest` lets an upstream release fail this repo
+                # with no code change here. The aws ruleset is already pinned
+                # to 0.45.0 in .tflint.hcl, so pin the binary to match.
+                tflint_version: v0.64.0
             - name: Terraform fmt (check)
               run: terraform fmt -check -recursive
             
@@ -69,7 +72,12 @@ jobs:
                 soft_fail: false
             
             - name: checkov (fail on any findings)
-              uses: bridgecrewio/checkov-action@v12
+              # Pinned to a commit SHA, not a moving tag. checkov-action is a
+              # docker action whose action.yml hardcodes the scanner image, so
+              # the git ref IS the version: this SHA carries checkov 3.3.19.
+              # CKV_AWS_394 shipped in 3.3.19 and turned this repo red with no
+              # code change on our side, which is what an unpinned scanner buys.
+              uses: bridgecrewio/checkov-action@444c9db6fa75e2d9c19ebf1fde7322089be9009e
               with:
                 directory: infrastructure
                 framework: terraform

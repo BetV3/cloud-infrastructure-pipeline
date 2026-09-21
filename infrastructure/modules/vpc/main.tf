@@ -1,5 +1,14 @@
+# Pinned to an explicit zone-name allowlist (CKV_AWS_394). Filtering only
+# on state means the result set grows whenever AWS adds an AZ to the region,
+# and `slice(names, 0, az_count)` would then silently re-point subnets at a
+# different zone on the next apply. An allowlist keeps the set closed.
 data "aws_availability_zones" "available" {
   state = "available"
+
+  filter {
+    name   = "zone-name"
+    values = var.availability_zone_names
+  }
 }
 
 locals {
